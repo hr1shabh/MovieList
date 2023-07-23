@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie List Application</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <nav class="navbar">
+      <h1 class="navbar-title">Movie List</h1>
+      <div class="search-box">
+        <input type="text" id="searchBox" placeholder="Search movies...">
+        <button id="searchBtn">Search</button>
+      </div>
+    </nav>
+  </header>
+  
+  <div id="movieList" class="movie-list">
+  </div>
+  
+  <div class="pagination">
+    <button id="prevBtn" class="pagination-btn">Previous</button>
+    <span id="currentPage" class="pagination-page">Page 1</span>
+    <button id="nextBtn" class="pagination-btn">Next</button>
+  </div>
+
+  <div id="movieDetails" class="hidden">
+    <div class="movie-details-content">
+      <img id="moviePoster" src="" alt="Movie Poster">
+      <h2 class="movie-details-title" id="movieTitle"></h2>
+      <div class="movie-details-info" id="previousComments">
+      </div>
+      <div class="movie-details-info">
+        <p><strong>Your Rating:</strong></p>
+        <div class="rating-container">
+          <span class="star" data-rating="1">&#9733;</span>
+          <span class="star" data-rating="2">&#9733;</span>
+          <span class="star" data-rating="3">&#9733;</span>
+          <span class="star" data-rating="4">&#9733;</span>
+          <span class="star" data-rating="5">&#9733;</span>
+        </div>
+      </div>
+      <div class="movie-details-info">
+        <p><strong>Your Comment:</strong></p>
+        <textarea id="commentInput" rows="4" placeholder="Enter your comment"></textarea>
+      </div>
+      <button id="submitBtn" class="submit-btn">Submit</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
