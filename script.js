@@ -1,271 +1,262 @@
-let currentPage = 1;
-let currentSearchPage = 1;
-const resultsPerPage = 10;
-let previousRatingsAndComments = [];
-let previousCommentsData = [];
-let searchQuery = 'Dark';
+// movies.js
 
-async function fetchMoviesByPage(page, query) {
-    const apiKey = '54bad426';
-    let apiUrl;
+const apiKey = '54bad426'; // Replace with your actual OMDB API key
+const defaultSearch = 'dark';
+const moviesPerPage = 10; // Number of movies to display per page
+let currentPage = 1; // Current page number
+let totalResults = 0; // Total number of results from API
+let lastSearchQuery = '';
 
-    if (query) {
-      apiUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=${query}&type=movie&page=${page}`;
-    } else {
-      apiUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=knight&type=movie&page=${page}`;
-    }
-  
+// Function to fetch movies from OMDB API with pagination
+// Function to fetch movies from OMDB API with pagination
+// Function to fetch movies from OMDB API with pagination
+async function fetchMovies(searchQuery = defaultSearch, page = 1) {
     try {
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      // Use default search query 'dark' if the provided searchQuery is empty
+      const query = searchQuery.trim() !== '' ? searchQuery : defaultSearch;
   
-      if (data.Response === 'True') {
-        return data.Search;
-      } else {
-        throw new Error(data.Error);
+      // Reset current page to 1 when a new search query is entered
+      if (searchQuery !== lastSearchQuery) {
+        currentPage = 1;
+        lastSearchQuery = searchQuery;
       }
-    } catch (error) {
-      console.error('Error fetching movies:', error.message);
-      return [];
-    }
-}
-
-function closeMovieDetails() {
-  const movieDetailsDiv = document.getElementById('movieDetails');
-  movieDetailsDiv.classList.remove('open');
-}
-
-function getPreviousRatingsAndComments() {
-    const data = localStorage.getItem('previousRatingsAndComments');
-    return data ? JSON.parse(data) : {};
-  }
   
-function updatePreviousRatingsAndComments(data) {
-    localStorage.setItem('previousRatingsAndComments', JSON.stringify(data));
-}
-
-// ... (previous code)
-
-async function showMovieDetails(movieId) {
-    try {
-      const apiKey = '54bad426';
-      const apiUrl = `https://www.omdbapi.com/?apikey=${apiKey}&i=${movieId}`;
-      const response = await fetch(apiUrl);
+      const response = await fetch(`http://www.omdbapi.com/?apikey=${apiKey}&s=${query}&type=movie&page=${page}`);
       const data = await response.json();
   
       if (data.Response === 'True') {
-        const movieDetailsDiv = document.getElementById('movieDetails');
-        movieDetailsDiv.classList.remove('hidden');
-        const moviePoster = document.getElementById('moviePoster');
-        const movieTitle = document.getElementById('movieTitle');
-        const previousComments = document.getElementById('previousComments');
-        const commentInput = document.getElementById('commentInput');
-        const ratingStars = document.querySelectorAll('.star');
-        const submitBtn = document.getElementById('submitBtn');
+        const movies = data.Search;
+        if (movies && movies.length > 0) {
+          const movieListContainer = document.querySelector('.movie-list');
+          movieListContainer.innerHTML = '';
   
-        // Clear previous comments before displaying new ones
-        previousComments.innerHTML = '';
+          movies.forEach((movie) => {
+            const movieContainer = document.createElement('div');
+            movieContainer.classList.add('movie-container');
+            movieContainer.setAttribute('data-movie-id', movie.imdbID);
   
-        commentInput.value = '';
-        ratingStars.forEach(star => star.classList.remove('active'));
-  
-        moviePoster.src = data.Poster;
-        movieTitle.textContent = data.Title;
-  
-        const previousRatingsAndComments = getPreviousRatingsAndComments();
-        const movieRatingsAndComments = previousRatingsAndComments[movieId] || [];
-  
-        movieRatingsAndComments.forEach(item => {
-          const commentElement = document.createElement('p');
-          commentElement.textContent = item.comment;
-          previousComments.appendChild(commentElement);
-  
-          const selectedStar = Array.from(ratingStars).find(star => parseInt(star.dataset.rating) === item.rating);
-          if (selectedStar) {
-            selectedStar.classList.add('active');
-          }
-        });
-  
-        ratingStars.forEach(star => {
-          star.addEventListener('click', () => {
-            const ratingValue = parseInt(star.dataset.rating);
-            ratingStars.forEach(star => {
-              if (parseInt(star.dataset.rating) <= ratingValue) {
-                star.classList.add('active');
-              } else {
-                star.classList.remove('active');
-              }
-            });
+            const moviePoster = movie.Poster !== 'N/A' ? movie.Poster : 'placeholder.jpg';
+            const movieHtml = `
+              <img class="movie-poster" src="${moviePoster}" alt="${movie.Title}">
+              <div class="movie-name">${movie.Title}</div>
+            `;
+            movieContainer.innerHTML = movieHtml;
+            movieListContainer.appendChild(movieContainer);
           });
-        });
   
-        submitBtn.addEventListener('click', () => {
-          handleSubmitClick(movieId, ratingStars, commentInput, previousComments);
-        });
-  
-        const closeButton = document.createElement('button');
-        closeButton.classList.add('close-button');
-        closeButton.textContent = 'X';
-        closeButton.addEventListener('click', closeMovieDetails);
-        const existingCloseButtons = document.querySelectorAll('.close-button');
-        existingCloseButtons.forEach(button => button.remove());
-        movieDetailsDiv.appendChild(closeButton);
-  
-        movieDetailsDiv.classList.add('open');
+          // Update total results and pagination buttons
+          totalResults = parseInt(data.totalResults);
+          updatePaginationButtons();
+        } else {
+          console.log('No movies found.');
+        }
       } else {
-        throw new Error(data.Error);
+        console.log('Error fetching movies:', data.Error);
       }
     } catch (error) {
-      console.error('Error fetching movie details:', error.message);
+      console.error('An error occurred:', error);
     }
   }
   
 
-// ... (previous code)
+// Function to update pagination buttons
+function updatePaginationButtons() {
+  const paginationContainer = document.querySelector('.pagination');
+  paginationContainer.innerHTML = '';
 
-async function handleSubmitClick(movieId, ratingStars, commentInput, previousComments) {
-  const selectedRating = document.querySelector('.star.active');
-  const ratingValue = selectedRating ? parseInt(selectedRating.dataset.rating) : 0;
-  const comment = commentInput.value.trim();
+  const prevButton = document.createElement('button');
+  prevButton.textContent = 'Previous';
+  prevButton.classList.add('prev-button');
+  prevButton.disabled = currentPage === 1;
+  prevButton.addEventListener('click', goToPreviousPage);
+  paginationContainer.appendChild(prevButton);
 
-  if (ratingValue > 0 && comment !== '') {
-    try {
-      const previousRatingsAndComments = getPreviousRatingsAndComments();
+  const pageNumbersContainer = document.createElement('div');
+  pageNumbersContainer.classList.add('page-numbers');
 
-      const movieRatingsAndComments = previousRatingsAndComments[movieId] || [];
+  const currentPageButton = document.createElement('button');
+  currentPageButton.textContent = currentPage;
+  currentPageButton.classList.add('current-page');
+  pageNumbersContainer.appendChild(currentPageButton);
 
-      movieRatingsAndComments.push({ rating: ratingValue, comment });
+  paginationContainer.appendChild(pageNumbersContainer);
 
-      previousRatingsAndComments[movieId] = movieRatingsAndComments;
-
-      updatePreviousRatingsAndComments(previousRatingsAndComments);
-
-      previousComments.innerHTML = '';
-      movieRatingsAndComments.forEach(item => {
-        const commentElement = document.createElement('p');
-        commentElement.textContent = item.comment;
-        previousComments.appendChild(commentElement);
-
-        const selectedStar = Array.from(ratingStars).find(star => parseInt(star.dataset.rating) === item.rating);
-        if (selectedStar) {
-          selectedStar.classList.add('active');
-        }
-      });
-
-      // Clear the comment input and reset star ratings
-      commentInput.value = '';
-      ratingStars.forEach(star => star.classList.remove('active'));
-    } catch (error) {
-      console.error('Error updating ratings and comments:', error.message);
-    }
-  } else {
-    alert('Please enter a rating and comment.');
-  }
+  const nextButton = document.createElement('button');
+  nextButton.textContent = 'Next';
+  nextButton.classList.add('next-button');
+  nextButton.disabled = currentPage === Math.ceil(totalResults / moviesPerPage);
+  nextButton.addEventListener('click', goToNextPage);
+  paginationContainer.appendChild(nextButton);
 }
 
-  
-async function displayMovies() {
-  searchQuery = document.getElementById('searchBox').value.trim();
-
-  if (searchQuery !== '') {
-    try {
-      const movies = await fetchMoviesByPage(currentSearchPage, searchQuery);
-
-      const movieListDiv = document.getElementById('movieList');
-      movieListDiv.innerHTML = '';
-
-      movies.forEach(movie => {
-        const movieCard = document.createElement('div');
-        movieCard.classList.add('movie-card');
-        movieCard.innerHTML = `
-          <img src="${movie.Poster}" alt="${movie.Title}">
-          <p class="movie-title">${movie.Title}</p>
-        `;
-
-        movieCard.addEventListener('click', () => {
-          showMovieDetails(movie.imdbID);
-        });
-
-        movieListDiv.appendChild(movieCard);
-      });
-
-      const prevBtn = document.getElementById('prevBtn');
-      const nextBtn = document.getElementById('nextBtn');
-      const currentPageSpan = document.getElementById('currentPage');
-
-      currentPageSpan.textContent = `Page ${currentSearchPage}`;
-
-      prevBtn.disabled = currentSearchPage === 1;
-      nextBtn.disabled = false;
-    } catch (error) {
-      console.error('Error fetching movies:', error.message);
-    }
-  } else {
-    try {
-      const movies = await fetchMoviesByPage(currentPage, searchQuery);
-
-      const movieListDiv = document.getElementById('movieList');
-      movieListDiv.innerHTML = '';
-
-      movies.forEach(movie => {
-        const movieCard = document.createElement('div');
-        movieCard.classList.add('movie-card');
-        movieCard.innerHTML = `
-          <img src="${movie.Poster}" alt="${movie.Title}">
-          <p class="movie-title">${movie.Title}</p>
-        `;
-
-        movieCard.addEventListener('click', () => {
-          showMovieDetails(movie.imdbID);
-        });
-
-        movieListDiv.appendChild(movieCard);
-      });
-
-      const prevBtn = document.getElementById('prevBtn');
-      const nextBtn = document.getElementById('nextBtn');
-      const currentPageSpan = document.getElementById('currentPage');
-
-      currentPageSpan.textContent = `Page ${currentPage}`;
-
-      prevBtn.disabled = currentPage === 1;
-      nextBtn.disabled = false;
-    } catch (error) {
-      console.error('Error fetching movies:', error.message);
-    }
-  }
-}
-
-async function handlePreviousClick() {
-  if (searchQuery !== '' && currentSearchPage > 1) {
-    currentSearchPage--;
-    await displayMovies();
-  } else if (currentPage > 1) {
+// Function to handle pagination button click
+function goToPreviousPage() {
+  if (currentPage > 1) {
     currentPage--;
-    await displayMovies();
+    fetchMovies(searchInput.value.trim(), currentPage);
   }
 }
 
-async function handleNextClick() {
-  if (searchQuery !== '') {
-    currentSearchPage++;
-    await displayMovies();
-  } else {
+function goToNextPage() {
+  const totalPages = Math.ceil(totalResults / moviesPerPage);
+  if (currentPage < totalPages) {
     currentPage++;
-    await displayMovies();
+    fetchMovies(searchInput.value.trim(), currentPage);
   }
 }
 
-async function handleSearchClick() {
-  searchQuery = document.getElementById('searchBox').value.trim();
-  currentSearchPage = 1;
-  await displayMovies();
+// ... Remaining JavaScript code remains the same ...
+
+// Function to fetch movie details from OMDB API
+async function fetchMovieDetails(movieID) {
+  try {
+    const response = await fetch(`http://www.omdbapi.com/?apikey=${apiKey}&i=${movieID}&plot=full`);
+    const movie = await response.json();
+    return movie;
+  } catch (error) {
+    console.error('Error fetching movie details:', error);
+    return null;
+  }
 }
 
-document.getElementById('prevBtn').addEventListener('click', handlePreviousClick);
-document.getElementById('nextBtn').addEventListener('click', handleNextClick);
-document.getElementById('searchBtn').addEventListener('click', handleSearchClick);
+// Function to submit user rating and comment
+function submitRatingAndComment(movieID) {
+    const usernameInput = document.getElementById('username');
+    const rating = selectedRating;
+    const commentInput = document.getElementById('comment');
+    const comment = commentInput.value.trim();
+  
+    // Retrieve existing data from Local Storage
+    const movieDetails = JSON.parse(localStorage.getItem('movieDetails')) || {};
+    const movieData = movieDetails[movieID] || { ratings: [], comments: [] };
+  
+    // Add the new rating and comment to the existing data
+    const newRating = { name: usernameInput.value.trim(), rating };
+    movieData.ratings.push(newRating);
+    movieData.comments.push(comment);
+  
+    // Update the movie data in Local Storage
+    movieDetails[movieID] = movieData;
+    localStorage.setItem('movieDetails', JSON.stringify(movieDetails));
+  
+    // Clear input fields after submission
+    usernameInput.value = '';
+    setRating(0);
+    commentInput.value = '';
+  
+    // Refresh movie details section to show updated ratings and comments
+    displayMovieDetails(movieID);
+  }
+  
+function displayMovieDetails(movieID) {
+  fetchMovieDetails(movieID).then((movie) => {
+    if (movie) {
+      const movieDetailsSection = document.querySelector('.movie-details');
+      movieDetailsSection.innerHTML = `
+        <span class="close-button" onclick="closeMovieDetails()">&times;</span>
+        <div class="movie-title">${movie.Title}</div>
+        <img class="movie-poster" src="${movie.Poster}" alt="${movie.Title}">
+        <div class="movie-info">Released: ${movie.Released}</div>
+        <!-- Display previous user ratings and comments (if any) -->
+        <div class="user-ratings-comments">
+          ${getPreviousRatingsAndComments(movieID)}
+        </div>
+        <!-- User rating and comment section -->
+        <div class="user-rating-input">
+          <label for="username">Your Name:</label>
+          <input type="text" id="username">
+          <label for="rating">Your Rating:</label>
+          <div class="rating-stars">
+            <span class="star" onclick="setRating(1)">&#9733;</span>
+            <span class="star" onclick="setRating(2)">&#9733;</span>
+            <span class="star" onclick="setRating(3)">&#9733;</span>
+            <span class="star" onclick="setRating(4)">&#9733;</span>
+            <span class="star" onclick="setRating(5)">&#9733;</span>
+          </div>
+          <label for="comment">Your Comment:</label>
+          <textarea id="comment" rows="4"></textarea>
+          <button class="submit-button" onclick="submitRatingAndComment('${movieID}')">Submit</button>
+        </div>
+      `;
+      movieDetailsSection.style.display = 'block';
+    }
+  });
+}
 
-displayMovies();
-const movieDetailsContainer = document.getElementById('movieDetails');
-movieDetailsContainer.classList.add('hidden');
+// Function to close the movie details section
+function closeMovieDetails() {
+  const movieDetailsSection = document.querySelector('.movie-details');
+  movieDetailsSection.style.display = 'none';
+}
+
+  // Function to set the selected rating
+  let selectedRating = 0;
+  function setRating(rating) {
+    selectedRating = rating;
+    const stars = document.querySelectorAll('.rating-stars .star');
+    stars.forEach((star, index) => {
+      star.classList.toggle('selected', index < rating);
+    });
+  }
+  
+  // Function to get the previous user ratings and comments from local storage
+// Function to get the previous user ratings and comments from local storage
+function getPreviousRatingsAndComments(movieID) {
+    const movieDetails = JSON.parse(localStorage.getItem('movieDetails')) || {};
+    const movieData = movieDetails[movieID];
+    
+    if (movieData && movieData.ratings && movieData.comments) {
+      let ratingsAndCommentsHtml = '';
+  
+      for (let i = 0; i < movieData.ratings.length; i++) {
+        const userRating = movieData.ratings[i];
+        const userComment = movieData.comments[i];
+  
+        ratingsAndCommentsHtml += `
+          <div class="user-rating-comment">
+            <div class="username">${userRating.name}</div>
+            <div class="rating">${getStarRating(userRating.rating)}</div>
+            <div class="comment">${userComment}</div>
+          </div>
+        `;
+      }
+  
+      return ratingsAndCommentsHtml;
+    }
+  
+    return 'No ratings or comments yet.';
+  }
+  
+  
+  // Function to convert numeric rating to star format
+  function getStarRating(rating) {
+    let stars = '';
+    for (let i = 0; i < rating; i++) {
+      stars += '&#9733;';
+    }
+    return stars;
+  }
+  
+// Call the fetchMovies function with default search query 'dark'
+fetchMovies();
+
+// Add real-time search functionality
+const searchInput = document.querySelector('.search-input');
+searchInput.addEventListener('input', (event) => {
+  const searchQuery = event.target.value.trim();
+  if (searchQuery) {
+    fetchMovies(searchQuery);
+  } else {
+    fetchMovies(defaultSearch);
+  }
+});
+
+// Handle click event on movie containers
+const movieListContainer = document.querySelector('.movie-list');
+movieListContainer.addEventListener('click', (event) => {
+  const movieContainer = event.target.closest('.movie-container');
+  if (movieContainer) {
+    const movieID = movieContainer.dataset.movieId;
+    displayMovieDetails(movieID);
+  }
+});
